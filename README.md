@@ -9,6 +9,11 @@
 
 O Urubu Banking System é uma aplicação de demonstração de um sistema bancário básico desenvolvido com o framework NestJS. Ele segue a lógica do "Urubu do PIX", permitindo que os usuários realizem operações como depósito, saque, transferência e verifiquem o histórico de transações. O sistema também inclui uma função de atualização diária dos saldos das contas com uma rentabilidade diaria de 8,5%.
 
+## Regra de Negócio
+<p align="center">
+  <img src="./images/regra_de_negocio/regra.jpg" alt="Regra de Negócio">
+</p>
+
 ## Funcionalidades
 
 - Realizar depósitos em contas de usuário.
@@ -17,6 +22,16 @@ O Urubu Banking System é uma aplicação de demonstração de um sistema bancá
 - Verificar o saldo de uma conta.
 - Verificar o histórico de transações de uma conta.
 - Atualização diária automática dos saldos das contas.
+
+##Executando o aplicativo
+
+Usando Docker
+Certifique-se de ter o Docker instalado em seu sistema.
+Na raiz do projeto, execute o seguinte comando para iniciar o aplicativo usando o Docker Compose:
+```bash
+$ docker-compose up
+```
+O aplicativo estará disponível em http://localhost:3000.
 
 ## Instalação
 
