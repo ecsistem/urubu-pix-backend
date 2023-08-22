@@ -9,30 +9,22 @@ import * as schedule from 'node-schedule';
 
 @Injectable()
 export class UrubuService {
+  private readonly MIN_DEPOSIT_AMOUNT = 200;
+
   constructor(private readonly prisma: PrismaService) {
-    this.scheduleDailyUpdate(); // Chamada para iniciar o agendamento das atualizações diárias
+    this.scheduleDailyUpdate();
   }
 
   async deposit(username: string, amount: number): Promise<User> {
-    if (amount <= 0) {
+    if (amount < this.MIN_DEPOSIT_AMOUNT) {
       throw new BadRequestException(
-        'O valor do depósito deve ser maior que zero',
+        `O valor do depósito deve ser pelo menos ${this.MIN_DEPOSIT_AMOUNT} reais`,
       );
     }
 
     const user = await this.findUser(username);
 
-    return this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        balance: {
-          increment: amount,
-        },
-        transactions: {
-          push: `Depósito de ${amount}`,
-        },
-      },
-    });
+    return this.updateUserBalance(user.id, amount, `Depósito de ${amount}`);
   }
 
   async withdraw(username: string, amount: number): Promise<User> {
@@ -46,17 +38,42 @@ export class UrubuService {
       throw new BadRequestException('Saldo insuficiente para o saque');
     }
 
-    return this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        balance: {
-          decrement: amount,
-        },
-        transactions: {
-          push: `Saque de ${amount}`,
-        },
-      },
-    });
+    return this.updateUserBalance(user.id, -amount, `Saque de ${amount}`);
+  }
+
+  async getBalance(username: string): Promise<number> {
+    const user = await this.findUser(username);
+    return user.balance;
+  }
+
+  async transfer(
+    senderUsername: string,
+    receiverUsername: string,
+    amount: number,
+  ): Promise<void> {
+    if (amount <= 0) {
+      throw new BadRequestException(
+        'O valor da transferência deve ser maior que zero',
+      );
+    }
+
+    const sender = await this.findUser(senderUsername);
+    const receiver = await this.findUser(receiverUsername);
+
+    if (sender.balance < amount) {
+      throw new BadRequestException('Saldo insuficiente para a transferência');
+    }
+
+    await this.updateUserBalance(
+      sender.id,
+      -amount,
+      `Transferência para ${receiverUsername}`,
+    );
+    await this.updateUserBalance(
+      receiver.id,
+      amount,
+      `Transferência de ${senderUsername}`,
+    );
   }
 
   async getTransactionHistory(username: string): Promise<string[]> {
@@ -76,14 +93,24 @@ export class UrubuService {
     return user;
   }
 
-  async update(username: string): Promise<User> {
-    const user = await this.findUser(username);
-    const percentual = 1.0833;
-    const updatedBalance = user.balance * percentual;
-    return this.prisma.user.update({
-      where: { id: user.id },
-      data: { balance: updatedBalance },
+  private async updateUserBalance(
+    userId: number,
+    amount: number,
+    transactionDescription: string,
+  ): Promise<User> {
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        balance: {
+          increment: amount,
+        },
+        transactions: {
+          push: transactionDescription,
+        },
+      },
     });
+
+    return updatedUser;
   }
 
   private scheduleDailyUpdate() {
@@ -93,14 +120,15 @@ export class UrubuService {
 
     schedule.scheduleJob(rule, async () => {
       const users = await this.prisma.user.findMany();
-      const percentual = 1.0839;
+      const percentual = 1.085;
 
       for (const user of users) {
         const updatedBalance = user.balance * percentual;
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: { balance: updatedBalance },
-        });
+        await this.updateUserBalance(
+          user.id,
+          updatedBalance - user.balance,
+          'Atualização diária',
+        );
       }
 
       console.log('Atualização diária dos saldos realizada.');

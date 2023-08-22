@@ -14,9 +14,26 @@ export class UrubuController {
   withdraw(@Body() { username, amount }: { username: string; amount: number }) {
     return this.urubuService.withdraw(username, amount);
   }
-  @Post('update')
-  update(@Body() { username }: { username: string }) {
-    return this.urubuService.update(username);
+
+  @Post('transfer')
+  transfer(
+    @Body()
+    {
+      senderUsername,
+      receiverUsername,
+      amount,
+    }: {
+      senderUsername: string;
+      receiverUsername: string;
+      amount: number;
+    },
+  ) {
+    return this.urubuService.transfer(senderUsername, receiverUsername, amount);
+  }
+
+  @Get('balance/:username')
+  getBalance(@Param('username') username: string) {
+    return this.urubuService.getBalance(username);
   }
 
   @Get('transaction-history/:username')
